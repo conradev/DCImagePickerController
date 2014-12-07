@@ -35,6 +35,7 @@
     imagePickerController.minimumNumberOfItems = 2;
     imagePickerController.maximumNumberOfItems = 5;
     imagePickerController.delegate = self;
+    imagePickerController.modalPresentationStyle = UIModalPresentationFormSheet;
 
     [self presentViewController:imagePickerController animated:YES completion:nil];
 }

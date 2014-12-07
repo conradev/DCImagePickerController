@@ -169,6 +169,7 @@
 @interface DCGroupViewController : UITableViewController <DCAssetsTableViewCellDelegate>
 
 @property (nonatomic, readonly, strong) ALAssetsGroup *group;
+@property (nonatomic) NSInteger itemsPerRow;
 @property (nonatomic, weak) UILabel *countLabel;
 
 @end
@@ -215,6 +216,11 @@
 
     self.tableView.separatorColor = [UIColor clearColor];
     self.tableView.tableFooterView = footerView;
+    [self.tableView reloadData];
+}
+
+- (void)setItemsPerRow:(NSInteger)itemsPerRow {
+    _itemsPerRow = itemsPerRow;
     [self.tableView reloadData];
 }
 
@@ -265,6 +271,7 @@
     [super viewWillAppear:animated];
 
     self.navigationItem.rightBarButtonItem.enabled = (_selectedAssets.count >= self.imagePickerController.minimumNumberOfItems);
+    self.itemsPerRow = (NSInteger)floor(self.tableView.contentSize.width / 80.0f);
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -278,7 +285,7 @@
         cell = [[DCAssetsTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:DCAssetsTableViewCellIdentifier];
 
     NSMutableArray *assets = [NSMutableArray array];
-    NSRange range = NSMakeRange(indexPath.row * _itemsPerRow, MIN(4, _group.numberOfAssets - indexPath.row * _itemsPerRow));
+    NSRange range = NSMakeRange(indexPath.row * _itemsPerRow, MIN(_itemsPerRow, _group.numberOfAssets - indexPath.row * _itemsPerRow));
     [_group enumerateAssetsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:range] options:0 usingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
         if (result)
             [assets addObject:result];
