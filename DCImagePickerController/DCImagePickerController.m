@@ -220,6 +220,9 @@
 }
 
 - (void)setItemsPerRow:(NSInteger)itemsPerRow {
+    if (!itemsPerRow)
+        return;
+
     _itemsPerRow = itemsPerRow;
     [self.tableView reloadData];
 }
@@ -259,10 +262,13 @@
     CGRect bounds = self.tableView.tableFooterView.bounds;
     self.countLabel.center = CGPointMake(CGRectGetMidX(bounds), CGRectGetMidY(bounds));
 
-    if (self.tableView.contentSize.height > CGRectGetMaxY(self.tableView.bounds) && !CGRectEqualToRect(_lastFrame, self.tableView.frame)) {
-        // This is a workaround for a bug in iOS 7
-        CGFloat footerHeight = (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_7_0 && kCFCoreFoundationVersionNumber < 1140.10 ? CGRectGetHeight(self.tableView.tableFooterView.bounds) : 0.0f);
-        [self.tableView setContentOffset:CGPointMake(0, self.tableView.contentSize.height - CGRectGetHeight(self.tableView.bounds) + footerHeight) animated:NO];
+    if (!CGRectEqualToRect(_lastFrame, self.tableView.frame)) {
+        if (self.tableView.contentSize.height > CGRectGetMaxY(self.tableView.bounds)) {
+            // This is a workaround for a bug in iOS 7
+            CGFloat footerHeight = (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_7_0 && kCFCoreFoundationVersionNumber < 1140.10 ? CGRectGetHeight(self.tableView.tableFooterView.bounds) : 0.0f);
+            [self.tableView setContentOffset:CGPointMake(0, self.tableView.contentSize.height - CGRectGetHeight(self.tableView.bounds) + footerHeight) animated:NO];
+        }
+        self.itemsPerRow = (NSInteger)floor(self.tableView.contentSize.width / 80.0f);
         _lastFrame = self.tableView.frame;
     }
 }
