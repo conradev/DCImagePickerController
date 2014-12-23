@@ -8,8 +8,9 @@
 
 #import "ViewController.h"
 #import "DCImagePickerController.h"
+#import <MobileCoreServices/MobileCoreServices.h>
 
-@interface ViewController () <DCImagePickerControllerDelegate>
+@interface ViewController () <DCImagePickerControllerDelegate, UIImagePickerControllerDelegate>
 
 @end
 
@@ -20,21 +21,39 @@
 
     self.view.backgroundColor = [UIColor whiteColor];
 
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    button.translatesAutoresizingMaskIntoConstraints = NO;
-    [button setTitle:@"Display" forState:UIControlStateNormal];
-    [button addTarget:self action:@selector(showImagePicker) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:button];
+    UIButton *customButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    customButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [customButton setTitle:@"DCImagePickerController" forState:UIControlStateNormal];
+    [customButton addTarget:self action:@selector(showCustomImagePicker) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:customButton];
 
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:button attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0f constant:0.0f]];
-    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:button attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.0f constant:0.0f]];
+    UIButton *systemButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    systemButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [systemButton setTitle:@"UIImagePickerController" forState:UIControlStateNormal];
+    [systemButton addTarget:self action:@selector(showSystemImagePicker) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:systemButton];
+
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:customButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0f constant:0.0f]];
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:customButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.0f constant:-20.0f]];
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:systemButton attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterX multiplier:1.0f constant:0.0f]];
+    [self.view addConstraint:[NSLayoutConstraint constraintWithItem:systemButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:self.view attribute:NSLayoutAttributeCenterY multiplier:1.0f constant:20.0f]];
 }
 
-- (void)showImagePicker {
+- (void)showCustomImagePicker {
     DCImagePickerController *imagePickerController = [[DCImagePickerController alloc] init];
     imagePickerController.minimumNumberOfItems = 2;
     imagePickerController.maximumNumberOfItems = 5;
     imagePickerController.delegate = self;
+    imagePickerController.mediaTypes = @[(id)kUTTypeImage, (id)kUTTypeMovie];
+    imagePickerController.modalPresentationStyle = UIModalPresentationFormSheet;
+
+    [self presentViewController:imagePickerController animated:YES completion:nil];
+}
+
+- (void)showSystemImagePicker {
+    UIImagePickerController *imagePickerController = [[UIImagePickerController alloc] init];
+    imagePickerController.delegate = self;
+    imagePickerController.mediaTypes = @[(id)kUTTypeImage, (id)kUTTypeMovie];
     imagePickerController.modalPresentationStyle = UIModalPresentationFormSheet;
 
     [self presentViewController:imagePickerController animated:YES completion:nil];
@@ -47,6 +66,16 @@
 }
 
 - (void)dcImagePickerControllerDidCancel:(DCImagePickerController *)picker {
+    [picker dismissViewControllerAnimated:YES completion:nil];
+}
+
+#pragma mark - UIImagePickerControllerDelegate
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
+    [picker dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
     [picker dismissViewControllerAnimated:YES completion:nil];
 }
 

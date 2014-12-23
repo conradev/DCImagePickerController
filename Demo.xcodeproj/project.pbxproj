@@ -11,6 +11,7 @@
 		D07C0F491A32848000BDD431 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D07C0F481A32848000BDD431 /* ViewController.m */; };
 		D07C0F4E1A32848000BDD431 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D07C0F4D1A32848000BDD431 /* Images.xcassets */; };
 		D07C0F691A32851500BDD431 /* DCImagePickerController.m in Sources */ = {isa = PBXBuildFile; fileRef = D07C0F681A32851500BDD431 /* DCImagePickerController.m */; };
+		D080972C1A48FF1100DD07CA /* Launch.xib in Resources */ = {isa = PBXBuildFile; fileRef = D080972B1A48FF1100DD07CA /* Launch.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +23,7 @@
 		D07C0F4D1A32848000BDD431 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		D07C0F671A32851500BDD431 /* DCImagePickerController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DCImagePickerController.h; sourceTree = "<group>"; };
 		D07C0F681A32851500BDD431 /* DCImagePickerController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DCImagePickerController.m; sourceTree = "<group>"; };
+		D080972B1A48FF1100DD07CA /* Launch.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = Launch.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				D07C0F4D1A32848000BDD431 /* Images.xcassets */,
+				D080972B1A48FF1100DD07CA /* Launch.xib */,
 				D07C0F411A32848000BDD431 /* Info.plist */,
 				D07C0F421A32848000BDD431 /* main.m */,
 			);
@@ -138,6 +141,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D080972C1A48FF1100DD07CA /* Launch.xib in Resources */,
 				D07C0F4E1A32848000BDD431 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -232,10 +236,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = Demo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -244,10 +250,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = Demo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
