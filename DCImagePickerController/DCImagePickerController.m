@@ -20,6 +20,66 @@
 
 @end
 
+static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
+    CGRect bounds = (CGRect){CGPointZero, size};
+    UIGraphicsBeginImageContextWithOptions(bounds.size, YES, 0.0f);
+
+    CGFloat scale = [[UIScreen mainScreen] scale];
+    UIImage *thumbnail = [[UIImage alloc] initWithCGImage:asset.thumbnail scale:scale orientation:UIImageOrientationUp];
+    [thumbnail drawInRect:bounds];
+
+    CGFloat margin = 4.0f;
+
+    if ([[asset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypeVideo]) {
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
+        CGFloat components[] = {0.0f, 0.0f, 0.0f, 0.8f};
+        CGGradientRef gradient = CGGradientCreateWithColorComponents(colorSpace, components, NULL, 2);
+        CGPoint start = CGPointMake(CGRectGetMidX(bounds), CGRectGetMaxY(bounds) - 10 - margin * 2.0f);
+        CGPoint end = CGPointMake(CGRectGetMidX(bounds), CGRectGetMaxY(bounds));
+        CGContextDrawLinearGradient(UIGraphicsGetCurrentContext(), gradient, start, end, 0);
+        CGColorSpaceRelease(colorSpace);
+        CGGradientRelease(gradient);
+
+        static CGPathRef videoPath = NULL;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            CGMutablePathRef path = CGPathCreateMutable();
+            CGPathAddRoundedRect(path, NULL, CGRectMake(0, 0, 9, 8), 2, 2);
+            CGPathMoveToPoint(path, NULL, 10, 4);
+            CGPathAddLineToPoint(path, NULL, 14, 0);
+            CGPathAddLineToPoint(path, NULL, 14, 8);
+            CGPathCloseSubpath(path);
+            videoPath = CGPathCreateCopy(path);
+            CGPathRelease(path);
+        });
+
+        UIBezierPath *path = [UIBezierPath bezierPathWithCGPath:videoPath];
+        [path applyTransform:CGAffineTransformMakeTranslation(margin, CGRectGetMaxY(bounds) - 10 - margin)];
+        [[UIColor whiteColor] setFill];
+        [path fill];
+    }
+
+    NSNumber *duration = [asset valueForProperty:ALAssetPropertyDuration];
+    if ([duration isKindOfClass:[NSNumber class]]) {
+        NSDate *toDate = [NSDate date];
+        NSDate *fromDate = [toDate dateByAddingTimeInterval:(-1.0f * [duration doubleValue])];
+        NSCalendarUnit components = (NSCalendarUnit)(NSHourCalendarUnit | NSMinuteCalendarUnit | NSSecondCalendarUnit);
+        NSDateComponents *dateComponents = [[NSCalendar currentCalendar] components:components fromDate:fromDate toDate:toDate options:0];
+        NSString *durationString = [NSString stringWithFormat:@"%ld:%02ld", (long)dateComponents.minute, (long)dateComponents.second];
+        if (dateComponents.hour)
+            durationString = [NSString stringWithFormat:@"%ld:%@", (long)dateComponents.hour, durationString];
+
+        UIFont *font = [UIFont systemFontOfSize:12.0f];
+        CGSize size = [durationString sizeWithFont:font];
+        [durationString drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin + 2, CGRectGetMaxY(bounds) - size.height - margin + 2) withFont:font];
+    }
+
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+
+    return image;
+}
+
 @class DCAssetsTableViewCell;
 
 @protocol DCAssetsTableViewCellDelegate <NSObject>
@@ -29,7 +89,7 @@
 
 @interface DCAssetsTableViewCell : UITableViewCell
 
-@property (nonatomic, weak) NSArray *assets;
+@property (nonatomic, strong) NSArray *assets;
 @property (nonatomic, weak) id<DCAssetsTableViewCellDelegate> delegate;
 
 @end
@@ -81,6 +141,12 @@
     CGFloat width = ((CGRectGetWidth(self.bounds) - _imageViews.count + 1) / _imageViews.count);
     [_imageViews enumerateObjectsUsingBlock:^(UIImageView *imageView, NSUInteger idx, BOOL *stop) {
         imageView.frame = CGRectMake((width + 1) * idx, 0, width, CGRectGetHeight(self.bounds) - 1);
+
+        ALAsset *asset = [_assets objectAtIndex:idx];
+        if (!asset || [asset isKindOfClass:[NSNull class]])
+            return [imageView setImage:nil];
+
+        imageView.image = DCAssetThumbnail(asset, imageView.frame.size);
     }];
     [_selectedImageViews enumerateObjectsUsingBlock:^(UIImageView *imageView, NSUInteger idx, BOOL *stop) {
         if ([imageView isKindOfClass:[NSNull class]])
@@ -99,6 +165,8 @@
 
         UIImageView *imageView = [[UIImageView alloc] init];
         imageView.userInteractionEnabled = YES;
+        imageView.contentMode = UIViewContentModeScaleAspectFill;
+        imageView.clipsToBounds = YES;
         [imageView addGestureRecognizer:tapGestureRecognizer];
         [self addSubview:imageView];
         [_imageViews addObject:imageView];
@@ -115,12 +183,6 @@
     [_selectedImageViews removeAllObjects];
     while (_selectedImageViews.count < assets.count)
         [_selectedImageViews addObject:[NSNull null]];
-
-    CGFloat scale = [[UIScreen mainScreen] scale];
-    [assets enumerateObjectsUsingBlock:^(ALAsset *asset, NSUInteger idx, BOOL *stop) {
-        UIImageView *imageView = [_imageViews objectAtIndex:idx];
-        imageView.image = [asset isKindOfClass:[NSNull class]] ? nil : [UIImage imageWithCGImage:asset.thumbnail scale:scale orientation:UIImageOrientationUp];
-    }];
 
     [self setNeedsLayout];
 }
@@ -585,11 +647,11 @@
 - (void)setMediaTypes:(NSArray *)mediaTypes {
     _mediaTypes = mediaTypes;
 
-    if ([mediaTypes containsObject:(id)kUTTypeImage] && [mediaTypes containsObject:(id)kUTTypeVideo])
+    if ([mediaTypes containsObject:(id)kUTTypeImage] && [mediaTypes containsObject:(id)kUTTypeMovie])
         _assetsFilter = [ALAssetsFilter allAssets];
     else if ([mediaTypes containsObject:(id)kUTTypeImage])
         _assetsFilter = [ALAssetsFilter allPhotos];
-    else if ([mediaTypes containsObject:(id)kUTTypeVideo])
+    else if ([mediaTypes containsObject:(id)kUTTypeMovie])
         _assetsFilter = [ALAssetsFilter allVideos];
 
     DCGroupViewController *groupViewController = ([self.topViewController isKindOfClass:[DCGroupViewController class]] ? (DCGroupViewController *)self.topViewController : nil);
