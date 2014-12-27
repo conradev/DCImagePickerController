@@ -107,8 +107,8 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
         self.detailTextLabel.hidden = YES;
         self.imageView.hidden = YES;
 
-        _imageViews = [NSMutableArray array];
-        _selectedImageViews = [NSMutableArray array];
+        _imageViews = [NSMutableArray new];
+        _selectedImageViews = [NSMutableArray new];
     }
     return self;
 }
@@ -254,7 +254,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     if (self) {
         _group = group;
         _itemsPerRow = 4;
-        _selectedAssets = [NSMutableSet set];
+        _selectedAssets = [NSMutableSet new];
         self.title = [group valueForProperty:ALAssetsGroupPropertyName];
         [self setAssetsFilter:[ALAssetsFilter allAssets]];
 
@@ -309,7 +309,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     if (_numberOfPhotos == numberOfPhotos || numberOfPhotos == 0)
         videos = [NSString stringWithFormat:@"%ld Videos", (long)_numberOfVideos];
 
-    NSMutableArray *components = [NSMutableArray array];
+    NSMutableArray *components = [NSMutableArray new];
     if (photos && (_numberOfPhotos || !videos || (!_numberOfPhotos && !_numberOfVideos)))
         [components addObject:photos];
     if (videos && (_numberOfVideos || !photos || (!_numberOfPhotos && !_numberOfVideos)))
@@ -352,7 +352,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     if (!cell)
         cell = [[DCAssetsTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:DCAssetsTableViewCellIdentifier];
 
-    NSMutableArray *assets = [NSMutableArray array];
+    NSMutableArray *assets = [NSMutableArray new];
     NSRange range = NSMakeRange(indexPath.row * _itemsPerRow, MIN(_itemsPerRow, _group.numberOfAssets - indexPath.row * _itemsPerRow));
     [_group enumerateAssetsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:range] options:0 usingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
         if (result)
@@ -550,7 +550,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     self.tableView.rowHeight = 86.0f;
     self.tableView.separatorColor = [UIColor clearColor];
 
-    NSMutableArray *groups = [NSMutableArray array];
+    NSMutableArray *groups = [NSMutableArray new];
     [self.imagePickerController.assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
         if (group) {
             [groups addObject:group];
@@ -670,12 +670,12 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
 
 - (void)finishedWithAssetURLs:(NSArray *)assetURLs {
     if ([self.delegate respondsToSelector:@selector(dcImagePickerController:didFinishPickingMediaWithInfo:)]) {
-        NSMutableArray *infos = [NSMutableArray array];
-        NSMutableArray *assets = [NSMutableArray array];
+        NSMutableArray *infos = [NSMutableArray new];
+        NSMutableArray *assets = [NSMutableArray new];
         dispatch_group_t group = dispatch_group_create();
         for (NSURL *assetURL in assetURLs) {
             dispatch_group_enter(group);
-            NSMutableDictionary *assetInfo = [NSMutableDictionary dictionary];
+            NSMutableDictionary *assetInfo = [NSMutableDictionary new];
             [assetInfo setObject:assetURL forKey:UIImagePickerControllerReferenceURL];
             [self.assetsLibrary assetForURL:assetURL resultBlock:^(ALAsset *asset) {
                 [assetInfo setValue:[asset valueForProperty:ALAssetPropertyType] forKey:UIImagePickerControllerMediaType];
