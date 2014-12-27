@@ -63,15 +63,24 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     if ([duration isKindOfClass:[NSNumber class]]) {
         NSDate *toDate = [NSDate date];
         NSDate *fromDate = [toDate dateByAddingTimeInterval:(-1.0f * [duration doubleValue])];
-        NSCalendarUnit components = (NSCalendarUnit)(NSHourCalendarUnit | NSMinuteCalendarUnit | NSSecondCalendarUnit);
+        NSCalendarUnit components = (NSCalendarUnit)(NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond);
         NSDateComponents *dateComponents = [[NSCalendar currentCalendar] components:components fromDate:fromDate toDate:toDate options:0];
         NSString *durationString = [NSString stringWithFormat:@"%ld:%02ld", (long)dateComponents.minute, (long)dateComponents.second];
         if (dateComponents.hour)
             durationString = [NSString stringWithFormat:@"%ld:%@", (long)dateComponents.hour, durationString];
 
         UIFont *font = [UIFont systemFontOfSize:12.0f];
-        CGSize size = [durationString sizeWithFont:font];
-        [durationString drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin + 2, CGRectGetMaxY(bounds) - size.height - margin + 2) withFont:font];
+        if ([NSAttributedString instancesRespondToSelector:@selector(drawAtPoint:)]) {
+            NSAttributedString *attributedDuration = [[NSAttributedString alloc] initWithString:durationString attributes:@{NSFontAttributeName: font, NSForegroundColorAttributeName: [UIColor whiteColor]}];
+            CGSize size = [attributedDuration size];
+            [attributedDuration drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin + 2, CGRectGetMaxY(bounds) - size.height - margin + 1)];
+        } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            CGSize size = [durationString sizeWithFont:font];
+            [durationString drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin + 2, CGRectGetMaxY(bounds) - size.height - margin + 2) withFont:font];
+#pragma clang diagnostic pop
+        }
     }
 
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
