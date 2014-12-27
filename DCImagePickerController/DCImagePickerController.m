@@ -671,6 +671,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
 - (void)finishedWithAssetURLs:(NSArray *)assetURLs {
     if ([self.delegate respondsToSelector:@selector(dcImagePickerController:didFinishPickingMediaWithInfo:)]) {
         NSMutableArray *infos = [NSMutableArray array];
+        NSMutableArray *assets = [NSMutableArray array];
         dispatch_group_t group = dispatch_group_create();
         for (NSURL *assetURL in assetURLs) {
             dispatch_group_enter(group);
@@ -680,13 +681,22 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
                 [assetInfo setValue:[asset valueForProperty:ALAssetPropertyType] forKey:UIImagePickerControllerMediaType];
                 [assetInfo setValue:[UIImage imageWithCGImage:asset.defaultRepresentation.fullResolutionImage] forKey:UIImagePickerControllerOriginalImage];
                 [infos addObject:assetInfo];
+                [assets addObject:asset];
                 dispatch_group_leave(group);
             } failureBlock:^(NSError *error) {
                 [infos addObject:assetInfo];
+                [assets addObject:[NSNull null]];
                 dispatch_group_leave(group);
             }];
         }
         dispatch_group_notify(group, dispatch_get_main_queue(), ^{
+            [infos sortUsingComparator:^NSComparisonResult(id obj1, id obj2) {
+                ALAsset *asset1 = [assets objectAtIndex:[infos indexOfObject:obj1]];
+                ALAsset *asset2 = [assets objectAtIndex:[infos indexOfObject:obj2]];
+                NSDate *date1 = (([asset1 isKindOfClass:[NSNull class]] ? nil : [asset1 valueForProperty:ALAssetPropertyDate]) ?: [NSDate distantPast]);
+                NSDate *date2 = (([asset2 isKindOfClass:[NSNull class]] ? nil : [asset2 valueForProperty:ALAssetPropertyDate]) ?: [NSDate distantPast]);
+                return [date1 compare:date2];
+            }];
             [self.delegate dcImagePickerController:self didFinishPickingMediaWithInfo:infos];
         });
     }
