@@ -66,9 +66,12 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     if ([duration isKindOfClass:[NSNumber class]]) {
         NSDate *toDate = [NSDate date];
         NSDate *fromDate = [toDate dateByAddingTimeInterval:(-1.0f * [duration doubleValue])];
-        NSCalendarUnit components = (NSCalendarUnit)(NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond);
+        NSCalendarUnit components = (NSCalendarUnit)(NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond | NSCalendarUnitNanosecond);
         NSDateComponents *dateComponents = [[NSCalendar currentCalendar] components:components fromDate:fromDate toDate:toDate options:0];
-        NSString *durationString = [NSString stringWithFormat:@"%ld:%02ld", (long)dateComponents.minute, (long)dateComponents.second];
+        NSInteger second = dateComponents.second;
+        if (dateComponents.nanosecond >= NSEC_PER_SEC / 2.0f)
+            second += 1;
+        NSString *durationString = [NSString stringWithFormat:@"%ld:%02ld", (long)dateComponents.minute, (long)second];
         if (dateComponents.hour)
             durationString = [NSString stringWithFormat:@"%ld:%@", (long)dateComponents.hour, durationString];
 
