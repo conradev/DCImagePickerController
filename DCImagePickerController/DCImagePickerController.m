@@ -7,6 +7,7 @@
 
 #import <AssetsLibrary/AssetsLibrary.h>
 #import <MobileCoreServices/MobileCoreServices.h>
+#import <objc/runtime.h>
 
 #import "DCImagePickerController.h"
 
@@ -19,6 +20,8 @@
 - (void)cancel;
 
 @end
+
+#pragma mark - Utilities
 
 static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     CGRect bounds = (CGRect){CGPointZero, size};
@@ -73,12 +76,12 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
         if ([NSAttributedString instancesRespondToSelector:@selector(drawAtPoint:)]) {
             NSAttributedString *attributedDuration = [[NSAttributedString alloc] initWithString:durationString attributes:@{NSFontAttributeName: font, NSForegroundColorAttributeName: [UIColor whiteColor]}];
             CGSize size = [attributedDuration size];
-            [attributedDuration drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin + 2, CGRectGetMaxY(bounds) - size.height - margin + 1)];
+            [attributedDuration drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin, CGRectGetMaxY(bounds) - size.height - margin + 1)];
         } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             CGSize size = [durationString sizeWithFont:font];
-            [durationString drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin + 2, CGRectGetMaxY(bounds) - size.height - margin + 2) withFont:font];
+            [durationString drawAtPoint:CGPointMake(CGRectGetMaxX(bounds) - size.width - margin, CGRectGetMaxY(bounds) - size.height - margin + 2) withFont:font];
 #pragma clang diagnostic pop
         }
     }
@@ -88,6 +91,8 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
 
     return image;
 }
+
+#pragma mark - DCAssetsTableViewCell
 
 @class DCAssetsTableViewCell;
 
@@ -235,6 +240,39 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
 
 @end
 
+#pragma mark - ALAssetsGroup (DCImagePickerController)
+
+@interface ALAssetsGroup (DCImagePickerController)
+
+@property (nonatomic, copy, getter=_dc_customName, setter=_dc_setCustomName:) NSString *customName;
+@property (nonatomic, copy, getter=_dc_customFilter, setter=_dc_setCustomFilter:) ALAssetsFilter *customFilter;
+
+@end
+
+static char customNameKey;
+static char customFilterKey;
+
+@implementation ALAssetsGroup (DCImagePickerController)
+
+- (void)_dc_setCustomName:(NSString *)customName {
+    objc_setAssociatedObject(self, &customNameKey, customName, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (NSString *)_dc_customName {
+    return objc_getAssociatedObject(self, &customNameKey);
+}
+
+- (void)_dc_setCustomFilter:(ALAssetsFilter *)customFilter {
+    [self setAssetsFilter:customFilter];
+    objc_setAssociatedObject(self, &customFilterKey, customFilter, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (ALAssetsFilter *)_dc_customFilter {
+    return objc_getAssociatedObject(self, &customFilterKey);
+}
+
+@end
+
 #pragma mark - DCGroupViewController
 
 @interface DCGroupViewController : UITableViewController <DCAssetsTableViewCellDelegate>
@@ -264,7 +302,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
         _group = group;
         _itemsPerRow = 4;
         _selectedAssets = [NSMutableSet new];
-        self.title = [group valueForProperty:ALAssetsGroupPropertyName];
+        self.title = (group.customName ?: [group valueForProperty:ALAssetsGroupPropertyName]);
         [self setAssetsFilter:[ALAssetsFilter allAssets]];
 
         UIBarButtonItem *item = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(done)];
@@ -460,7 +498,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
 
 - (void)setGroup:(ALAssetsGroup *)group {
     _group = group;
-    self.textLabel.text = [group valueForProperty:ALAssetsGroupPropertyName];
+    self.textLabel.text = (group.customName ?: [group valueForProperty:ALAssetsGroupPropertyName]);
     self.detailTextLabel.text = [@(group.numberOfAssets) stringValue];
     self.imageView.contentMode = UIViewContentModeCenter;
 
@@ -559,23 +597,40 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
     self.tableView.rowHeight = 86.0f;
     self.tableView.separatorColor = [UIColor clearColor];
 
+    void (^failure)(NSError *) = ^(NSError *error) {
+        NSLog(@"%@: Error enumerating groups", self.imagePickerController);
+        [self.imagePickerController cancel];
+    };
+
+    ALAssetsLibrary *assetsLibrary = self.imagePickerController.assetsLibrary;
     NSMutableArray *groups = [NSMutableArray new];
-    [self.imagePickerController.assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
+    [assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
         if (group) {
             [groups addObject:group];
         } else {
-            NSArray *sorting = @[@(ALAssetsGroupSavedPhotos), @(ALAssetsGroupPhotoStream), @(ALAssetsGroupEvent), @(ALAssetsGroupAlbum), @(ALAssetsGroupFaces)];
-            self.groups = [groups sortedArrayWithOptions:0 usingComparator:^NSComparisonResult(ALAssetsGroup *obj1, ALAssetsGroup *obj2) {
-                ALAssetsGroupType type1 = [[obj1 valueForProperty:ALAssetsGroupPropertyType] unsignedIntegerValue];
-                ALAssetsGroupType type2 = [[obj2 valueForProperty:ALAssetsGroupPropertyType] unsignedIntegerValue];
-                return [@([sorting indexOfObject:@(type1)]) compare:@([sorting indexOfObject:@(type2)])];
-            }];
-            [self.tableView reloadData];
+            [assetsLibrary enumerateGroupsWithTypes:ALAssetsGroupAll usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
+                if ([[group valueForProperty:ALAssetsGroupPropertyType] isEqualToNumber:@(ALAssetsGroupSavedPhotos)]) {
+                    if ([self.imagePickerController.mediaTypes containsObject:(id)kUTTypeMovie]) {
+                        group.customName = @"Videos";
+                        group.customFilter = [ALAssetsFilter allVideos];
+                        [groups addObject:group];
+                    }
+                    *stop = YES;
+                } else {
+                    NSArray *sorting = @[@(ALAssetsGroupSavedPhotos), @(ALAssetsGroupPhotoStream), @(ALAssetsGroupEvent), @(ALAssetsGroupAlbum), @(ALAssetsGroupFaces)];
+                    self.groups = [groups sortedArrayWithOptions:0 usingComparator:^NSComparisonResult(ALAssetsGroup *obj1, ALAssetsGroup *obj2) {
+                        ALAssetsGroupType type1 = [[obj1 valueForProperty:ALAssetsGroupPropertyType] unsignedIntegerValue];
+                        ALAssetsGroupType type2 = [[obj2 valueForProperty:ALAssetsGroupPropertyType] unsignedIntegerValue];
+                        NSComparisonResult result = [@([sorting indexOfObject:@(type1)]) compare:@([sorting indexOfObject:@(type2)])];
+                        if (result == NSOrderedSame)
+                            result = (obj1.customName ? (obj2.customName ? NSOrderedSame : NSOrderedDescending) : (obj2.customName ? NSOrderedAscending : NSOrderedSame));
+                        return result;
+                    }];
+                    [self.tableView reloadData];
+                }
+            } failureBlock:failure];
         }
-    } failureBlock:^(NSError *error) {
-        NSLog(@"%@: Error enumerating groups", self.imagePickerController);
-        [self.imagePickerController cancel];
-    }];
+    } failureBlock:failure];
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -597,7 +652,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     ALAssetsGroup *group = [self.groups objectAtIndex:indexPath.row];
     DCGroupViewController *groupViewController = [[DCGroupViewController alloc] initWithGroup:group];
-    [groupViewController setAssetsFilter:self.imagePickerController.assetsFilter];
+    [groupViewController setAssetsFilter:(group.customFilter ?: self.imagePickerController.assetsFilter)];
     [self.navigationController pushViewController:groupViewController animated:YES];
 }
 
@@ -642,7 +697,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
             *stop = (group != nil);
             if (group) {
                 DCGroupViewController *groupViewController = [[DCGroupViewController alloc] initWithGroup:group];
-                [groupViewController setAssetsFilter:_assetsFilter];
+                [groupViewController setAssetsFilter:(group.customFilter ?: _assetsFilter)];
                 [self setViewControllers:@[groupViewController] animated:NO];
                 _sourceType = sourceType;
             }
@@ -664,7 +719,7 @@ static UIImage *DCAssetThumbnail(ALAsset *asset, CGSize size) {
         _assetsFilter = [ALAssetsFilter allVideos];
 
     DCGroupViewController *groupViewController = ([self.topViewController isKindOfClass:[DCGroupViewController class]] ? (DCGroupViewController *)self.topViewController : nil);
-    [groupViewController setAssetsFilter:_assetsFilter];
+    [groupViewController setAssetsFilter:(groupViewController.group.customFilter ?: _assetsFilter)];
 }
 
 - (void)setMinimumNumberOfItems:(NSUInteger)minimumNumberOfItems {
